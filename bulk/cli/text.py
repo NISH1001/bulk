@@ -1,13 +1,14 @@
 import os
 import numpy as np
 import pandas as pd
-from bokeh.layouts import column, row
+from bokeh.layouts import column, row, layout
 from bokeh.models import (
     Button,
     ColorBar,
     ColumnDataSource,
     CustomJS,
     DataTable,
+    Div,
     TableColumn,
     TextInput,
 )
@@ -65,6 +66,25 @@ def bulk_text(path, keywords=None, download=True):
         )
         source.data = df
 
+        # a div to show expanded cell content
+        detail_div = Div(text="", width=400, height=100)
+
+        # JS callback for expanding cell content
+        callback = CustomJS(
+            args=dict(source=source, detail_div=detail_div),
+            code="""
+            const indices = cb_obj.indices;
+            const data = source.data;
+            if (indices.length > 0) {
+                const idx = indices[0];
+                detail_div.text = data['text'][idx];
+            }
+        """,
+        )
+
+        # add callback to the table
+        data_table.source.selected.js_on_change("indices", callback)
+
         p = figure(
             title="",
             sizing_mode="scale_both",
@@ -113,6 +133,7 @@ def bulk_text(path, keywords=None, download=True):
             save_btn.on_click(save)
 
         controls = column(p, text_filename, save_btn)
-        return doc.add_root(row(controls, data_table))
+        layout_config = layout([[controls, column(data_table, detail_div)]])
+        return doc.add_root(layout_config)
 
     return bkapp
