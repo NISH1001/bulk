@@ -1,12 +1,25 @@
+import os
 import numpy as np
 import pandas as pd
 from bokeh.layouts import column, row
-from bokeh.models import (Button, ColorBar, ColumnDataSource, CustomJS,
-                          DataTable, TableColumn, TextInput)
+from bokeh.models import (
+    Button,
+    ColorBar,
+    ColumnDataSource,
+    CustomJS,
+    DataTable,
+    TableColumn,
+    TextInput,
+)
 from bokeh.plotting import figure
 from wasabi import msg
 
 from bulk._bokeh_utils import download_js_code, read_file, save_file
+
+
+def _env_to_bool(value: str):
+    value = str(value).lower().strip()
+    return value in ["1", "t", "true"]
 
 
 def bulk_text(path, keywords=None, download=True):
@@ -21,6 +34,10 @@ def bulk_text(path, keywords=None, download=True):
         highlighted_idx = []
 
         columns = [TableColumn(field="text", title="text")]
+
+        # If need to display the `label` column
+        if _env_to_bool(os.environ.get("BULK_DISPLAY_LABEL", False)):
+            columns.append(TableColumn(field="label", title="label"))
 
         def update(attr, old, new):
             """Callback used for plot update when lasso selecting"""
@@ -65,7 +82,7 @@ def bulk_text(path, keywords=None, download=True):
         circle_kwargs = {
             "x": "x",
             "y": "y",
-            "size": 1,
+            "size": int(os.environ.get("BULK_CIRCLE_SIZE", 1)),
             "source": source_orig,
             "alpha": "alpha",
         }
@@ -75,10 +92,10 @@ def bulk_text(path, keywords=None, download=True):
             p.add_layout(color_bar, "right")
 
         scatter = p.circle(**circle_kwargs)
-        p.plot_width = 300
+        p.plot_width = int(os.environ.get("BULK_PLOT_WIDTH", 300))
         if "color" in df.columns:
-            p.plot_width = 350
-        p.plot_height = 300
+            p.plot_width = p.plot_width + 50
+        p.plot_height = int(os.environ.get("BULK_PLOT_HEIGHT", 300))
 
         scatter.data_source.selected.on_change("indices", update)
 
