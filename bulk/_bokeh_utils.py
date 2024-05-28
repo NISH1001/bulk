@@ -53,6 +53,34 @@ def get_color_mapping(
     return mapper, df
 
 
+def get_color_mapping_for_labels(
+    df: pd.DataFrame,
+) -> Tuple[Optional[bokeh.transform.transform], pd.DataFrame]:
+    """Creates a color mapping based on the label and color columns"""
+    if "label" not in df.columns or "color" not in df.columns:
+        return None, df
+
+    # Ensure that the color column is of type string
+    df["color"] = df["color"].astype(str)
+
+    all_labels = list(df["label"].dropna().unique())
+    all_colors = list(df["color"].dropna().unique())
+
+    if len(all_labels) != len(all_colors):
+        raise ValueError(
+            "The number of unique labels does not match the number of unique colors."
+        )
+
+    mapper = factor_cmap(
+        field_name="label",
+        palette=all_colors,
+        factors=all_labels,
+        nan_color="lightgrey",
+    )
+
+    return mapper, df
+
+
 def clean_data_for_output(dataf: pd.DataFrame, orig_cols: List[str]) -> pd.DataFrame:
     return dataf[orig_cols]
 
@@ -155,7 +183,7 @@ function table_to_jsonl(source) {
     const columns = Object.keys(subset)
     const nrows = source.get_length()
     let lines = ""
-    
+
     for (let i = 0; i < nrows; i++) {
         let row = {};
         for (let j = 0; j < columns.length; j++) {

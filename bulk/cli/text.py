@@ -15,12 +15,13 @@ from bokeh.models import (
 from bokeh.plotting import figure
 from wasabi import msg
 
-from bulk._bokeh_utils import download_js_code, read_file, save_file
-
-
-def _env_to_bool(value: str):
-    value = str(value).lower().strip()
-    return value in ["1", "t", "true"]
+from bulk._bokeh_utils import (
+    download_js_code,
+    read_file,
+    save_file,
+    get_color_mapping_for_labels,
+)
+from bulk._utils import env_to_bool
 
 
 def bulk_text(path, keywords=None, download=True):
@@ -37,7 +38,7 @@ def bulk_text(path, keywords=None, download=True):
         columns = [TableColumn(field="text", title="text")]
 
         # If need to display the `label` column
-        if _env_to_bool(os.environ.get("BULK_DISPLAY_LABEL", False)):
+        if env_to_bool(os.environ.get("BULK_DISPLAY_LABEL", False)):
             columns.append(TableColumn(field="label", title="label"))
 
         def update(attr, old, new):
@@ -107,7 +108,12 @@ def bulk_text(path, keywords=None, download=True):
             "alpha": "alpha",
         }
         if "color" in df.columns:
-            circle_kwargs.update({"color": colormap})
+            # if color is assigned based on color and label columns
+            if env_to_bool(os.environ.get("BULK_MANUAL_LABEL_COLOR", False)):
+                circle_kwargs.update(dict(color="color"))
+                colormap, _ = get_color_mapping_for_labels(df)
+            else:
+                circle_kwargs.update({"color": colormap})
             color_bar = ColorBar(color_mapper=colormap["transform"], width=8)
             p.add_layout(color_bar, "right")
 
